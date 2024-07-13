@@ -1,0 +1,53 @@
+﻿@using System.Reactive
+@using System.Reactive.Linq
+@using N8WasmMudLab.Models
+@implements IDisposable
+@page "/demo001"
+
+<h3>_DEMO001</h3>
+<p>tickCnt: @tickCnt</p>
+
+<button @onclick=HandleClick>Click me</button>
+
+@code {
+  long tickCnt = 0L;
+  MyObserver<string> globalObserver = new();
+
+  object _lockobj = new object();
+  IDisposable? subscriber = null;
+
+  public void Dispose()
+  {
+    lock (_lockobj)
+    {
+      subscriber?.Dispose();
+      subscriber = null;
+    }
+  }
+
+  protected override void OnInitialized()
+  {
+    RxDemo1();
+  }
+
+  void RxDemo1()
+  {
+    lock (_lockobj)
+    {
+      var xs = Observable.Timer(DateTimeOffset.Now.AddSeconds(1.5), TimeSpan.FromSeconds(2));
+      subscriber = xs.Subscribe(x =>
+      {
+        Console.WriteLine($"timer => {x}");
+        tickCnt = x;
+        InvokeAsync(StateHasChanged);
+      });
+    }
+  }
+
+  void HandleClick()
+  {
+    Observable.Return($"點擊我 at {DateTime.Now:HH:mm:ss}")
+              .Subscribe(globalObserver);
+  }
+
+}
