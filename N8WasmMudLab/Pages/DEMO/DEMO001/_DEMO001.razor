@@ -1,17 +1,21 @@
 ﻿@using System.Reactive
 @using System.Reactive.Linq
+@using System.Reactive.Subjects
 @using N8WasmMudLab.Models
 @implements IDisposable
 @page "/demo001"
 
 <h3>_DEMO001</h3>
-<p>tickCnt: @tickCnt</p>
+<p>message: @message</p>
 
 <button @onclick=HandleClick>Click me</button>
 
 @code {
-  long tickCnt = 0L;
+  string message = string.Empty;
   MyObserver<string> globalObserver = new();
+
+  Subject<string> subject1 = default!;
+  IObservable<long> interval = default!;
 
   object _lockobj = new object();
   IDisposable? subscriber = null;
@@ -27,18 +31,40 @@
 
   protected override void OnInitialized()
   {
-    RxDemo1();
+    //RxDemo1();
+
+    interval = Observable.Interval(TimeSpan.FromSeconds(1));
+    subject1 = new Subject<string>();
+
+    var plan = subject1.And(interval);
+    var xs2 = Observable.When(plan.Then((x, i) => x));
+
+    subscriber = xs2.Subscribe(x =>
+    {
+      Console.WriteLine($"timer => {x} at {DateTime.Now:mm:ss.fff}");
+      message = x;
+      InvokeAsync(StateHasChanged);
+    });
   }
 
   void RxDemo1()
   {
     lock (_lockobj)
     {
-      var xs = Observable.Timer(DateTimeOffset.Now.AddSeconds(1.5), TimeSpan.FromSeconds(2));
-      subscriber = xs.Subscribe(x =>
+      var interval = Observable.Interval(TimeSpan.FromSeconds(1));
+
+      //var xs = Observable.Return(999);
+      //var xs = Observable.Timer(DateTimeOffset.Now.AddSeconds(1.5), TimeSpan.FromSeconds(0.5));
+      var xs = Observable.Range(1, 10);
+
+      var plan = xs.And(interval);
+
+      var xs2 = Observable.When(plan.Then((x, i) => x));
+
+      subscriber = xs2.Subscribe(x =>
       {
-        Console.WriteLine($"timer => {x}");
-        tickCnt = x;
+        Console.WriteLine($"timer => {x} at {DateTime.Now:mm:ss.fff}");
+        //tickCnt = x;
         InvokeAsync(StateHasChanged);
       });
     }
@@ -46,8 +72,10 @@
 
   void HandleClick()
   {
-    Observable.Return($"點擊我 at {DateTime.Now:HH:mm:ss}")
-              .Subscribe(globalObserver);
+    subject1.OnNext($"點擊我 at {DateTime.Now:mm:ss.fff}");
+
+    // Observable.Return($"點擊我 at {DateTime.Now:HH:mm:ss}")
+    //           .Subscribe(globalObserver);
   }
 
 }
