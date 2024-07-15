@@ -4,6 +4,9 @@ using System.Reactive.Linq;
 
 namespace N8WasmMudLab.Models;
 
+/// <summary>
+/// for debug indicator
+/// </summary>
 internal class MyObserver<T> : IObserver<T>
 {
   string name;

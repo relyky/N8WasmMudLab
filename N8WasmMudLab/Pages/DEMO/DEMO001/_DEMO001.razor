@@ -6,76 +6,89 @@
 @page "/demo001"
 
 <h3>_DEMO001 - playground </h3>
-<p>message: @message</p>
 
 <button @onclick=HandleClick>Click me</button>
 
+<div class="d-flex gap-3">
+  <div class="box">
+    <h6>interval</h6>
+    <div>
+      @foreach (string msg in intervalObserver.MsgQueue.Reverse())
+      {
+        <span>@msg</span>
+        <br />
+      }
+    </div>
+  </div>
+  <div class="box">
+    <h6>click</h6>
+    <div>
+      @foreach (string msg in clickObserver.MsgQueue.Reverse())
+      {
+        <span>@msg</span>
+        <br />
+      }
+    </div>
+  </div>
+  <div class="box">
+    <h6>interval2</h6>
+    <div>
+      @foreach (string msg in interval2Observer.MsgQueue.Reverse())
+      {
+        <span>@msg</span>
+        <br />
+      }
+    </div>
+  </div>
+  <div class="box">
+    <h6>result</h6>
+    <div>
+      @foreach (string msg in resultObserver.MsgQueue.Reverse())
+      {
+        <span>@msg</span>
+        <br />
+      }
+    </div>
+  </div>
+</div>
+
 @code {
-  string message = string.Empty;
-  MyObserver<string> globalObserver = new("globalObserver");
+  MyObserver<long> intervalObserver = new("interval");
+  MyObserver<string> interval2Observer = new("interval2");
+  MyObserver<string> clickObserver = new("click");
+  MyObserver<string> resultObserver = new("result");
 
-  Subject<string> subject1 = default!;
-  IObservable<long> interval = default!;
-
-  object _lockobj = new object();
+  IObservable<long> interval = Observable.Interval(TimeSpan.FromSeconds(1d));
+  Subject<string> clickSubject = new();
   IDisposable? subscriber = null;
 
   public void Dispose()
   {
-    lock (_lockobj)
-    {
-      subscriber?.Dispose();
-      subscriber = null;
-    }
+    subscriber?.Dispose();
+    subscriber = null;
   }
 
   protected override void OnInitialized()
   {
-    //RxDemo1();
+    // init
+    intervalObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
+    interval2Observer.OnNextReceived = _ => InvokeAsync(StateHasChanged);
+    clickObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
+    resultObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
 
-    interval = Observable.Interval(TimeSpan.FromSeconds(1));
-    subject1 = new Subject<string>();
+    // 訂閱
+    interval.Subscribe(intervalObserver);
+    clickSubject.Subscribe(clickObserver);
 
-    var plan = subject1.And(interval);
-    var xs2 = Observable.When(plan.Then((x, i) => x));
+    var buffered = clickSubject.Buffer(TimeSpan.FromSeconds(1d)).Where(b => b.Count > 0);
+    buffered.Select(bufferedItems => $"b[{bufferedItems.Count}]").Subscribe(interval2Observer);
 
-    subscriber = xs2.Subscribe(x =>
-    {
-      Console.WriteLine($"timer => {x} at {DateTime.Now:mm:ss.fff}");
-      message = x;
-      InvokeAsync(StateHasChanged);
-    });
-  }
-
-  void RxDemo1()
-  {
-    lock (_lockobj)
-    {
-      var interval = Observable.Interval(TimeSpan.FromSeconds(1));
-
-      //var xs = Observable.Return(999);
-      //var xs = Observable.Timer(DateTimeOffset.Now.AddSeconds(1.5), TimeSpan.FromSeconds(0.5));
-      var xs = Observable.Range(1, 10);
-
-      var plan = xs.And(interval);
-
-      var xs2 = Observable.When(plan.Then((x, i) => x));
-
-      subscriber = xs2.Subscribe(x =>
-      {
-        Console.WriteLine($"timer => {x} at {DateTime.Now:mm:ss.fff}");
-        //tickCnt = x;
-        InvokeAsync(StateHasChanged);
-      });
-    }
+    buffered.SelectMany(bufferedItems => bufferedItems.ToObservable().Zip(interval).Select(z => z.First))
+            .Subscribe(resultObserver);
   }
 
   void HandleClick()
   {
-    subject1.OnNext($"點擊我 at {DateTime.Now:mm:ss.fff}");
-
-    // Observable.Return($"點擊我 at {DateTime.Now:HH:mm:ss}")
-    //           .Subscribe(globalObserver);
+    clickSubject.OnNext($"c{DateTime.Now:mmss.fff}");
   }
-
 }
