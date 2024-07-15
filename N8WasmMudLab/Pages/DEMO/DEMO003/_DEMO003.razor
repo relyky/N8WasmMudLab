@@ -1,0 +1,17 @@
+﻿@page "/demo003"
+@using System.Reactive.Subjects
+
+<h3>_DEMO003</h3>
+
+<CascadingValue Value=this>
+  <div class="d-flex gap-3">
+    <PlusProducer />
+    <MinusProducer />
+  </div>
+  <Consumer />
+</CascadingValue>
+
+@code {
+  public Subject<int> plusSubject = new Subject<int>();
+  public Subject<int> minusSubject = new Subject<int>();
+}

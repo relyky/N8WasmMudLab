@@ -5,14 +5,14 @@
 @implements IDisposable
 @page "/demo001"
 
-<h3>_DEMO001</h3>
+<h3>_DEMO001 - playground </h3>
 <p>message: @message</p>
 
 <button @onclick=HandleClick>Click me</button>
 
 @code {
   string message = string.Empty;
-  MyObserver<string> globalObserver = new();
+  MyObserver<string> globalObserver = new("globalObserver");
 
   Subject<string> subject1 = default!;
   IObservable<long> interval = default!;

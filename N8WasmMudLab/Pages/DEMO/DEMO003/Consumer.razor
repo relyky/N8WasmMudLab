@@ -1,0 +1,81 @@
+﻿@using System.Reactive
+@using System.Reactive.Linq
+@using System.Reactive.Subjects
+@using N8WasmMudLab.Models
+
+<div class="box">
+  <h3>Consumer</h3>
+
+  <div>merge & scan: @accValue</div>
+  <div class="d-flex gap-3">
+    <div class="box">
+      <h6>plusCnt: @plusObserver.NextCnt</h6>
+      <div>
+        @foreach (string msg in plusObserver.MsgQueue.Reverse())
+        {
+          <span>@msg</span>
+          <br />
+        }
+      </div>
+    </div>
+    <div class="box">
+      <h6>minusCnt: @minusObserver.NextCnt</h6>
+      <div>
+        @foreach (string msg in minusObserver.MsgQueue.Reverse())
+        {
+          <span>@msg</span>
+          <br />
+        }
+      </div>
+    </div>
+    <div class="box">
+      <h6>ambCnt: @ambObserver.NextCnt</h6>
+      <div>
+        @foreach (string msg in ambObserver.MsgQueue.Reverse())
+        {
+          <span>@msg</span>
+          <br />
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+@code {
+  [CascadingParameter] _DEMO003 BizState { get; set; } = default!;
+
+  //# Property
+  Subject<int> PlusSubject => BizState.plusSubject;
+  Subject<int> MinusSubject => BizState.minusSubject;
+
+  //# State
+  MyObserver<int> plusObserver = new("plus");
+  MyObserver<int> minusObserver = new("minus");
+  int accValue = 0;
+  MyObserver<int> ambObserver = new("amb");
+
+  protected override void OnInitialized()
+  {
+    // init
+    plusObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
+    minusObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
+    ambObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
+
+    // 訂閱
+    PlusSubject.Subscribe(plusObserver);
+    MinusSubject.Subscribe(minusObserver);
+
+    // merge & scan
+    Observable.Merge(PlusSubject, MinusSubject)
+              .Scan(0, (int acc, int cur) => acc + cur)
+              .Subscribe((acc) =>
+              {
+                accValue = acc;
+                InvokeAsync(StateHasChanged);
+              });
+
+    // Amb 先到者獨佔
+    Observable.Amb(PlusSubject, MinusSubject)
+              .Subscribe(ambObserver);
+  }
+}
