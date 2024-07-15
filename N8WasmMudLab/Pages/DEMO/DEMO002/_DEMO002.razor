@@ -1,0 +1,13 @@
+﻿@page "/demo002"
+@using System.Reactive.Subjects
+
+<h3>_DEMO002</h3>
+
+<CascadingValue Value=mySubject>
+  <Producer />
+  <Consumer />
+</CascadingValue>
+
+@code {
+  Subject<string> mySubject = new Subject<string>();
+}

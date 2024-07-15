@@ -1,0 +1,30 @@
+﻿@using System.Reactive
+@using System.Reactive.Linq
+@using System.Reactive.Subjects
+
+<div class="box">
+  <h3>Consumer</h3>
+
+  <pre>
+    @foreach (string msg in msgQueue)
+    {
+      <span>@msg</span><br/>
+    }
+  </pre>
+</div>
+
+@code {
+  [CascadingParameter] Subject<string> MySubject { get; set; } = default!;
+
+  Queue<string> msgQueue = new Queue<string>(5);
+
+  protected override void OnInitialized()
+  {
+    MySubject.Subscribe(msg =>
+    {
+      if (msgQueue.Count >= 5) msgQueue.Dequeue();
+      msgQueue.Enqueue(msg);
+      InvokeAsync(StateHasChanged);
+    });
+  }
+}

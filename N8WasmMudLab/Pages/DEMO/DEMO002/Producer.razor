@@ -1,0 +1,59 @@
+﻿@using System.Reactive
+@using System.Reactive.Linq
+@using System.Reactive.Subjects
+
+<div class="box">
+  <h3>Producer</h3>
+
+  <button @onclick=HandleClick>Click me</button>
+
+  <button @onclick=HandleCreate>Create</button>
+
+  <button @onclick=HandleInterval>
+    interval(<span>@(subs is null ? "Off" : "On"))</span>
+  </button>
+</div>
+
+@code {
+  [CascadingParameter] Subject<string> MySubject { get; set; } = default!;
+
+  //## resource
+  //IObservable<string> interval = Observable.Timer(DateTimeOffset.Now, TimeSpan.FromSeconds(1.5)).Select(i => $"interval {i}");
+  IObservable<string> interval = Observable.Interval(TimeSpan.FromSeconds(1.5)).Select(i => $"interval {i}");
+  IDisposable? subs = null;
+
+  IObservable<string> create = Observable.Create<string>(async (obs) =>
+  {
+    obs.OnNext("create A");
+    await Task.Delay(500);
+    obs.OnNext("create B");
+    await Task.Delay(2000);
+    obs.OnNext("create C");
+
+    //obs.OnCompleted(); // 一但 Completed 就停止訂閱。
+    return () => { Console.WriteLine("Unsubscribe [create]"); };
+  });
+
+  void HandleClick()
+  {
+    MySubject.OnNext($"click {DateTime.Now:mmss.fff}");
+  }
+
+  void HandleInterval()
+  {
+    if (subs is null)
+    {
+      subs = interval.Subscribe(MySubject);
+    }
+    else
+    {
+      subs.Dispose();
+      subs = null;
+    }
+  }
+
+  void HandleCreate()
+  {
+    create.Subscribe(MySubject);
+  }
+}
