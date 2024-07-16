@@ -5,7 +5,7 @@
 @implements IDisposable
 @page "/demo001"
 
-<h3>_DEMO001 - playground </h3>
+<h3>_DEMO001 - 拉長 click 間的間隔時間。</h3>
 
 <button @onclick=HandleClick>Click me</button>
 
@@ -31,9 +31,9 @@
     </div>
   </div>
   <div class="box">
-    <h6>interval2</h6>
+    <h6>buffered</h6>
     <div>
-      @foreach (string msg in interval2Observer.MsgQueue.Reverse())
+      @foreach (string msg in bufferedObserver.MsgQueue.Reverse())
       {
         <span>@msg</span>
         <br />
@@ -54,7 +54,7 @@
 
 @code {
   MyObserver<long> intervalObserver = new("interval");
-  MyObserver<string> interval2Observer = new("interval2");
+  MyObserver<string> bufferedObserver = new("buffered");
   MyObserver<string> clickObserver = new("click");
   MyObserver<string> resultObserver = new("result");
 
@@ -72,8 +72,8 @@
   {
     // init
     intervalObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
-    interval2Observer.OnNextReceived = _ => InvokeAsync(StateHasChanged);
     clickObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
+    bufferedObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
     resultObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
 
     // 訂閱
@@ -81,14 +81,22 @@
     clickSubject.Subscribe(clickObserver);
 
     var buffered = clickSubject.Buffer(TimeSpan.FromSeconds(1d)).Where(b => b.Count > 0);
-    buffered.Select(bufferedItems => $"b[{bufferedItems.Count}]").Subscribe(interval2Observer);
+    buffered.Select(bufferedItems => $"b[{bufferedItems.Count}]").Subscribe(bufferedObserver);
 
-    buffered.SelectMany(bufferedItems => bufferedItems.ToObservable().Zip(interval).Select(z => z.First))
-            .Subscribe(resultObserver);
+    // 依序合併
+    Observable.Concat(buffered.Select(bufferedItems => bufferedItems.ToObservable().Zip(interval)))
+              .Select(x => x.First)
+              .Subscribe(resultObserver);
+
+    // 平行合併，等同 merge。
+    //buffered.SelectMany(bufferedItems => bufferedItems.ToObservable().Zip(interval).Select(z => z.First))
+    //        .Subscribe(resultObserver);
   }
 
+  int clickIdx = 1;
   void HandleClick()
   {
-    clickSubject.OnNext($"c{DateTime.Now:mmss.fff}");
+    //clickSubject.OnNext($"c{DateTime.Now:mmss.fff}");
+    clickSubject.OnNext($"c{clickIdx++}");
   }
 }
