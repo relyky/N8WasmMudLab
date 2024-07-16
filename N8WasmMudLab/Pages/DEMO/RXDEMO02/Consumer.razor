@@ -29,6 +29,16 @@
       </div>
     </div>
     <div class="box">
+      <h6>accCnt: @accObserver.NextCnt</h6>
+      <div>
+        @foreach (string msg in accObserver.MsgQueue.Reverse())
+        {
+          <span>@msg</span>
+          <br />
+        }
+      </div>
+    </div>
+    <div class="box">
       <h6>ambCnt: @ambObserver.NextCnt</h6>
       <div>
         @foreach (string msg in ambObserver.MsgQueue.Reverse())
@@ -42,7 +52,7 @@
 </div>
 
 @code {
-  [CascadingParameter] _DEMO003 BizState { get; set; } = default!;
+  [CascadingParameter] _RXDEMO02 BizState { get; set; } = default!;
 
   //# Property
   Subject<int> PlusSubject => BizState.plusSubject;
@@ -52,6 +62,7 @@
   MyObserver<int> plusObserver = new("plus");
   MyObserver<int> minusObserver = new("minus");
   int accValue = 0;
+  MyObserver<int> accObserver = new("acc");
   MyObserver<int> ambObserver = new("amb");
 
   protected override void OnInitialized()
@@ -59,6 +70,7 @@
     // init
     plusObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
     minusObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
+    accObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
     ambObserver.OnNextReceived = _ => InvokeAsync(StateHasChanged);
 
     // 訂閱
@@ -66,13 +78,15 @@
     MinusSubject.Subscribe(minusObserver);
 
     // merge & scan
-    Observable.Merge(PlusSubject, MinusSubject)
-              .Scan(0, (int acc, int cur) => acc + cur)
-              .Subscribe((acc) =>
-              {
-                accValue = acc;
-                InvokeAsync(StateHasChanged);
-              });
+    IObservable<int> accumulate = Observable.Merge(PlusSubject, MinusSubject)
+                                            .Scan(0, (int acc, int cur) => acc + cur);
+
+    accumulate.Subscribe(accObserver);
+    accumulate.Subscribe(acc =>    
+    {
+      accValue = acc;
+      InvokeAsync(StateHasChanged);
+    });
 
     // Amb 先到者獨佔
     Observable.Amb(PlusSubject, MinusSubject)

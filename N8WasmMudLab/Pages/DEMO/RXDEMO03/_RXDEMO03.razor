@@ -3,9 +3,9 @@
 @using System.Reactive.Subjects
 @using N8WasmMudLab.Models
 @implements IDisposable
-@page "/demo001"
+@page "/rxdemo03"
 
-<h3>_DEMO001 - 拉長 click 間的間隔時間。</h3>
+<h3>RxDemo03 - 拉長 click 間的間隔時間。</h3>
 
 <button @onclick=HandleClick>Click me</button>
 
@@ -80,15 +80,17 @@
     interval.Subscribe(intervalObserver);
     clickSubject.Subscribe(clickObserver);
 
+    //# 分批延遲間隔: click → Buffer → buffered_click
     var buffered = clickSubject.Buffer(TimeSpan.FromSeconds(1d)).Where(b => b.Count > 0);
     buffered.Select(bufferedItems => $"b[{bufferedItems.Count}]").Subscribe(bufferedObserver);
 
-    // 依序合併
+    //# 依序合併: Concat(delayed_click)
+    // buffered_click → Zip(interval) → Select → delayed_click
     Observable.Concat(buffered.Select(bufferedItems => bufferedItems.ToObservable().Zip(interval)))
               .Select(x => x.First)
               .Subscribe(resultObserver);
 
-    // 平行合併，等同 merge。
+    //# 平行合併，等同 merge。順序可能會變化。
     //buffered.SelectMany(bufferedItems => bufferedItems.ToObservable().Zip(interval).Select(z => z.First))
     //        .Subscribe(resultObserver);
   }

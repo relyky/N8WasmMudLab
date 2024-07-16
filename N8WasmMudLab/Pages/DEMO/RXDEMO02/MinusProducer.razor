@@ -1,0 +1,21 @@
+﻿@using System.Reactive.Subjects
+
+<div class="box">
+  <h3>MinusProducer</h3>
+
+  <button @onclick=HandleClick>－１</button>
+
+</div>
+
+@code {
+  [CascadingParameter] _RXDEMO02 BizState { get; set; } = default!;
+
+  //# Property
+  Subject<int> MinusSubject => BizState.minusSubject;
+
+  void HandleClick()
+  {
+    //MinusSubject.OnNext(Random.Shared.Next(1, 7) * -1);
+    MinusSubject.OnNext(-1);
+  }
+}
