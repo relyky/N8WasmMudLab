@@ -16,13 +16,13 @@
 @code {
   [CascadingParameter] Subject<string> MySubject { get; set; } = default!;
 
-  Queue<string> msgQueue = new Queue<string>(5);
+  Queue<string> msgQueue = new Queue<string>(10);
 
   protected override void OnInitialized()
   {
     MySubject.Subscribe(msg =>
     {
-      if (msgQueue.Count >= 5) msgQueue.Dequeue();
+      if (msgQueue.Count >= 10) msgQueue.Dequeue();
       msgQueue.Enqueue(msg);
       InvokeAsync(StateHasChanged);
     });

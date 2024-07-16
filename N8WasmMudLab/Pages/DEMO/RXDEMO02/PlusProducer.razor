@@ -3,18 +3,19 @@
 <div class="box">
   <h3>PlusProducer</h3>
 
-  <button @onclick=HandleClick>Click me</button>
+  <button @onclick=HandleClick>＋１</button>
 
 </div>
 
 @code {
-  [CascadingParameter] _DEMO003 BizState { get; set; } = default!;
+  [CascadingParameter] _RXDEMO02 BizState { get; set; } = default!;
 
   //# Property
   Subject<int> PlusSubject => BizState.plusSubject;
 
   void HandleClick()
   {
-    PlusSubject.OnNext(Random.Shared.Next(1,7));
+    //PlusSubject.OnNext(Random.Shared.Next(1,7));
+    PlusSubject.OnNext(+1);
   }
 }
